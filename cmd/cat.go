@@ -51,12 +51,11 @@ possible user these filter
 			c := logcat.NewRowFilter()
 			b := bytes.NewBuffer(buff.Bytes())
 			a := logcat.Accesslog{
-				Content:   b,
-				RowFilter: c,
+				Content:     b,
+				RowFilter:   c,
+				PrintFields: viper.GetString("fields"),
 			}
-			for _, row := range a.Cat() {
-				fmt.Println(row)
-			}
+			a.Cat()
 		}
 	},
 }
@@ -81,4 +80,6 @@ func init() {
 	viper.BindPFlag("target-status-code", catCmd.PersistentFlags().Lookup("target-status-code"))
 	catCmd.PersistentFlags().StringP("http-method", "", ".*", "")
 	viper.BindPFlag("http-method", catCmd.PersistentFlags().Lookup("http-method"))
+	catCmd.PersistentFlags().StringP("fields", "", "type timestamp elb client:port", "field to print")
+	viper.BindPFlag("fields", catCmd.PersistentFlags().Lookup("fields"))
 }
