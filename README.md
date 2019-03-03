@@ -1,5 +1,7 @@
 # ELBLOGCAT
 
+[![Go Report Card](https://goreportcard.com/badge/github.com/dbgeek/elblogcat)](https://goreportcard.com/report/github.com/dbgeek/elblogcat)
+
 `elblogcat` is tool to list accesslogs for aws loadbalancers and cat them to see the content of them without need to download them local and cat them manual.
 
 ## Installation
