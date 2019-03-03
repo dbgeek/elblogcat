@@ -33,3 +33,15 @@ checksum:
 
 release:
   prerelease: auto
+
+changelog:
+  # could either be asc, desc or empty
+  # Default is empty
+  sort: asc
+  filters:
+    # commit messages matching the regexp listed here will be removed from
+    # the changelog
+    # Default is empty
+    exclude:
+      - '^docs:'
+      - '^ci:'
