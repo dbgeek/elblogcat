@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"time"
 
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/spf13/cobra"
@@ -58,9 +59,9 @@ func init() {
 	viper.BindPFlag("s3-bucket", rootCmd.PersistentFlags().Lookup("s3-bucket"))
 	rootCmd.PersistentFlags().StringP("s3-prefix", "p", ".*", "The prefix (logical hierarchy) in the bucket. If you don't specify a prefix, the logs are placed at the root level of the bucket.")
 	viper.BindPFlag("s3-prefix", rootCmd.PersistentFlags().Lookup("s3-prefix"))
-	rootCmd.PersistentFlags().StringP("start-time", "", ".*", "")
+	rootCmd.PersistentFlags().StringP("start-time", "", defaultStartTime().Format("2006-01-02 15:04:05"), "")
 	viper.BindPFlag("start-time", rootCmd.PersistentFlags().Lookup("start-time"))
-	rootCmd.PersistentFlags().StringP("end-time", "", ".*", "")
+	rootCmd.PersistentFlags().StringP("end-time", "", time.Now().Format("2006-01-02 15:04:05"), "")
 	viper.BindPFlag("end-time", rootCmd.PersistentFlags().Lookup("end-time"))
 
 	// Cobra also supports local flags, which will only run
@@ -92,4 +93,10 @@ func initConfig() {
 	if err := viper.ReadInConfig(); err == nil {
 		fmt.Println("Using config file:", viper.ConfigFileUsed())
 	}
+}
+
+func defaultStartTime() time.Time {
+	t := time.Now().UTC()
+	d := 24 * time.Hour
+	return t.Truncate(d)
 }

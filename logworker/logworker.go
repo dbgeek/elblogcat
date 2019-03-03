@@ -3,6 +3,7 @@ package logworker
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
@@ -117,7 +118,7 @@ func (l *LogWorker) List() []string {
 	var accessLogs []string
 	input := &s3.ListObjectsV2Input{
 		Bucket:    aws.String(l.Configuration.Bucket),
-		Prefix:    aws.String(fmt.Sprintf("%s%s", l.Configuration.Prefix, l.AccessLogFilter.AccesslogPath())),
+		Prefix:    aws.String(l.AccessLogFilter.AccesslogPath(l.Configuration.Prefix)),
 		Delimiter: aws.String("/"),
 		MaxKeys:   aws.Int64(200),
 	}
@@ -137,8 +138,9 @@ func (l *LogWorker) List() []string {
 	return accessLogs
 }
 
-func (a *AccessLogFilter) AccesslogPath() string {
-	return fmt.Sprintf("/AWSLogs/%s/elasticloadbalancing/%s/%s/", a.AwsAccountID, a.Region, a.StartTime.Format("2006/01/02"))
+func (a *AccessLogFilter) AccesslogPath(prefix string) string {
+	return filepath.Join(prefix, fmt.Sprintf("AWSLogs/%s/elasticloadbalancing/%s/%s/", a.AwsAccountID, a.Region, a.StartTime.Format("2006/01/02"))) + "/"
+
 }
 
 func (a *AccessLogFilter) beforeEndTime(accessLog string) bool {
@@ -176,11 +178,16 @@ func NewAccessLogFilter() AccessLogFilter {
 		Logger.Fatalf("Failed to parse start time. Gott error: %v", err)
 		fmt.Println("failed to parse starttime")
 	}
-
+	endTime, err := time.Parse("2006-01-02 15:04:05", viper.GetString("end-time"))
+	if err != nil {
+		Logger.Fatalf("Failed to parse end time. Gott error: %v", err)
+		fmt.Println("failed to parse endtime")
+	}
 	accessLogFilter := AccessLogFilter{}
 	accessLogFilter.AwsAccountID = viper.GetString("aws-account-id")
 	accessLogFilter.Region = viper.GetString("region")
 	accessLogFilter.StartTime = startTime // time.Now()
+	accessLogFilter.EndTime = endTime
 	accessLogFilter.LoadBalancerID = viper.GetString("load-balancer-id")
 	accessLogFilter.IPaddress = viper.GetString("ip-address")
 	accessLogFilter.RandomString = viper.GetString("random-string")
