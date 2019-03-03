@@ -3,6 +3,7 @@ package logworker
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
@@ -177,11 +178,16 @@ func NewAccessLogFilter() AccessLogFilter {
 		Logger.Fatalf("Failed to parse start time. Gott error: %v", err)
 		fmt.Println("failed to parse starttime")
 	}
-
+	endTime, err := time.Parse("2006-01-02 15:04:05", viper.GetString("end-time"))
+	if err != nil {
+		Logger.Fatalf("Failed to parse end time. Gott error: %v", err)
+		fmt.Println("failed to parse endtime")
+	}
 	accessLogFilter := AccessLogFilter{}
 	accessLogFilter.AwsAccountID = viper.GetString("aws-account-id")
 	accessLogFilter.Region = viper.GetString("region")
 	accessLogFilter.StartTime = startTime // time.Now()
+	accessLogFilter.EndTime = endTime
 	accessLogFilter.LoadBalancerID = viper.GetString("load-balancer-id")
 	accessLogFilter.IPaddress = viper.GetString("ip-address")
 	accessLogFilter.RandomString = viper.GetString("random-string")
