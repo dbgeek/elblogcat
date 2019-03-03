@@ -117,7 +117,7 @@ func (l *LogWorker) List() []string {
 	var accessLogs []string
 	input := &s3.ListObjectsV2Input{
 		Bucket:    aws.String(l.Configuration.Bucket),
-		Prefix:    aws.String(fmt.Sprintf("%s%s", l.Configuration.Prefix, l.AccessLogFilter.AccesslogPath())),
+		Prefix:    aws.String(l.AccessLogFilter.AccesslogPath(l.Configuration.Prefix)),
 		Delimiter: aws.String("/"),
 		MaxKeys:   aws.Int64(200),
 	}
@@ -137,8 +137,9 @@ func (l *LogWorker) List() []string {
 	return accessLogs
 }
 
-func (a *AccessLogFilter) AccesslogPath() string {
-	return fmt.Sprintf("/AWSLogs/%s/elasticloadbalancing/%s/%s/", a.AwsAccountID, a.Region, a.StartTime.Format("2006/01/02"))
+func (a *AccessLogFilter) AccesslogPath(prefix string) string {
+	return filepath.Join(prefix, fmt.Sprintf("AWSLogs/%s/elasticloadbalancing/%s/%s/", a.AwsAccountID, a.Region, a.StartTime.Format("2006/01/02"))) + "/"
+
 }
 
 func (a *AccessLogFilter) beforeEndTime(accessLog string) bool {

@@ -37,7 +37,7 @@ possible user these filter
 
 		for _, v := range client.List() {
 			buff := &aws.WriteAtBuffer{}
-			key := fmt.Sprintf("%s%s%s", configuration.Prefix, accessLogFilter.AccesslogPath(), v)
+			key := fmt.Sprintf("%s%s", accessLogFilter.AccesslogPath(configuration.Prefix), v)
 			_, err := client.S3Downloader.Download(buff, &s3.GetObjectInput{
 				Bucket: aws.String(viper.GetString("s3-bucket")),
 				Key:    aws.String(key),
