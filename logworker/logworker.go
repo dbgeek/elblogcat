@@ -126,7 +126,7 @@ func (l *LogWorker) List() []string {
 		func(page *s3.ListObjectsV2Output, lastPage bool) bool {
 			for _, val := range page.Contents {
 				accessLog := strings.Split(*val.Key, "/")[len(strings.Split(*val.Key, "/"))-1]
-				if l.AccessLogFilter.matcher.MatchString(accessLog) {
+				if l.AccessLogFilter.matcher.MatchString(accessLog) && l.AccessLogFilter.filterByTime(accessLog) {
 					accessLogs = append(accessLogs, accessLog)
 				}
 			}
