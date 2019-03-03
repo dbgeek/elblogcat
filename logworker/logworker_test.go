@@ -7,28 +7,40 @@ import (
 	"time"
 )
 
-func TestAccessLogFilter(t *testing.T) {
+func TestAccessLogFilterAccesslogPath(t *testing.T) {
 
 	tt := []struct {
 		name            string
 		accessLogFilter AccessLogFilter
-		accessLogPath   string
+		prefix          string
+		out             string
 	}{
-		{"test1",
+		{"WithoutPrefix",
 			AccessLogFilter{
 
 				AwsAccountID: "00000000111111",
 				Region:       "eu-west-1",
 				StartTime:    time.Now(),
 			},
-			fmt.Sprintf("/AWSLogs/00000000111111/elasticloadbalancing/eu-west-1/%s/", time.Now().Format("2006/01/02")),
+			"",
+			fmt.Sprintf("AWSLogs/00000000111111/elasticloadbalancing/eu-west-1/%s/", time.Now().Format("2006/01/02")),
+		},
+		{"WithPrefix",
+			AccessLogFilter{
+
+				AwsAccountID: "00000000111111",
+				Region:       "eu-west-1",
+				StartTime:    time.Now(),
+			},
+			"team-xxx",
+			fmt.Sprintf("team-xxx/AWSLogs/00000000111111/elasticloadbalancing/eu-west-1/%s/", time.Now().Format("2006/01/02")),
 		},
 	}
 
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			if tc.accessLogFilter.AccesslogPath() != tc.accessLogPath {
-				t.Fatalf("accespath test %v should be %v; got %v", tc.name, tc.accessLogFilter.AccesslogPath(), tc.accessLogPath)
+			if tc.accessLogFilter.AccesslogPath(tc.prefix) != tc.out {
+				t.Fatalf("accespath test %v should be %v; got %v", tc.name, tc.out, tc.accessLogFilter.AccesslogPath(tc.prefix))
 			}
 		})
 	}
