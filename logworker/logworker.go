@@ -143,7 +143,7 @@ func (a *AccessLogFilter) AccesslogPath(prefix string) string {
 
 }
 
-func (a *AccessLogFilter) beforeEndTime(accessLog string) bool {
+func (a *AccessLogFilter) filterByTime(accessLog string) bool {
 	accessLogEndTimeStr := strings.Split(accessLog, "_")[4]
 	accessLogEndTimeStamp, err := time.Parse("20060102T1504Z", accessLogEndTimeStr)
 	if err != nil {

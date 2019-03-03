@@ -175,7 +175,7 @@ func TestStartTimeEndTime(t *testing.T) {
 			accessLogFilter.StartTime = sTime
 			accessLogFilter.EndTime = eTime
 
-			if !accessLogFilter.beforeEndTime(tc.in) == tc.out {
+			if !accessLogFilter.filterByTime(tc.in) == tc.out {
 				t.Fatalf("startTime: %v, endTime: %v, accesslog timestamp: %v",
 					sTime.Format("20060102T15:04Z"),
 					eTime.Format("20060102T15:04Z"),
