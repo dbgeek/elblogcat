@@ -52,6 +52,10 @@ type (
 	}
 )
 
+const (
+	accessLogEndTimeFormat string = "20060102T1504Z"
+)
+
 var (
 	// Logger instance of logrus.Logger
 	Logger *logrus.Logger
@@ -159,7 +163,7 @@ func (l *LogWorker) Tail(logch chan<- string) {
 				accessLogFilter.AwsAccountID,
 				accessLogFilter.Region,
 				accessLogFilter.LoadBalancerID,
-				t.Format("20060102T1504Z"),
+				t.Format(accessLogEndTimeFormat),
 			)
 			s3Prefix := filepath.Join(l.AccessLogFilter.AccesslogPath(l.Configuration.Prefix), lbAccessLog)
 			for _, accessLog := range *l.listAccessLogs(s3Prefix) {
@@ -178,7 +182,7 @@ func (l *LogWorker) Tail(logch chan<- string) {
 				accessLogFilter.AwsAccountID,
 				accessLogFilter.Region,
 				accessLogFilter.LoadBalancerID,
-				now.UTC().Format("20060102T1504Z"),
+				now.UTC().Format(accessLogEndTimeFormat),
 			)
 			s3Prefix := filepath.Join(l.AccessLogFilter.AccesslogPath(l.Configuration.Prefix), lbAccessLog)
 			for _, accessLog := range *l.listAccessLogs(s3Prefix) {
@@ -189,7 +193,7 @@ func (l *LogWorker) Tail(logch chan<- string) {
 			}
 			for k := range consumedAccessLogs {
 				ts := strings.Split(k, "_")
-				t, _ := time.Parse("20060102T1504Z", ts[4])
+				t, _ := time.Parse(accessLogEndTimeFormat, ts[4])
 				if t.Before(now.UTC().Add(-2 * time.Minute)) {
 					delete(consumedAccessLogs, k)
 				}
@@ -229,7 +233,7 @@ func (a *AccessLogFilter) AccesslogPath(prefix string) string {
 
 func (a *AccessLogFilter) filterByTime(accessLog string) bool {
 	accessLogEndTimeStr := strings.Split(accessLog, "_")[4]
-	accessLogEndTimeStamp, err := time.Parse("20060102T1504Z", accessLogEndTimeStr)
+	accessLogEndTimeStamp, err := time.Parse(accessLogEndTimeFormat, accessLogEndTimeStr)
 	if err != nil {
 		Logger.Fatalf("failed to parse timestamp for accesslog name")
 	}
