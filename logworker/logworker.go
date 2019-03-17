@@ -18,6 +18,7 @@ import (
 )
 
 type (
+	// LogWorker worker
 	LogWorker struct {
 		Config          *AWSconfiguration
 		S3              *s3.S3
@@ -30,10 +31,14 @@ type (
 		Region  string
 		Profile string
 	}
+	// Configuration hold the configuration that is needed.
 	Configuration struct {
-		Bucket string
-		Prefix string
+		Bucket          string
+		Prefix          string
+		PollingInterval time.Duration
+		MaxKeys         int64
 	}
+	// AccessLogFilter ..
 	AccessLogFilter struct {
 		matchString    string
 		AwsAccountID   string
@@ -47,7 +52,12 @@ type (
 	}
 )
 
+const (
+	accessLogEndTimeFormat string = "20060102T1504Z"
+)
+
 var (
+	// Logger instance of logrus.Logger
 	Logger *logrus.Logger
 )
 
@@ -80,6 +90,7 @@ func newFilter(accessLogFilter *AccessLogFilter) *regexp.Regexp {
 	return regexp
 }
 
+// NewLogWorker return a pointer of LogWorker
 func NewLogWorker(
 	awsConfiguration *AWSconfiguration,
 	configuration *Configuration,
@@ -113,6 +124,7 @@ func NewLogWorker(
 	return &logWorker
 }
 
+// List returns slice of string with accesslog names
 func (l *LogWorker) List() []string {
 
 	var accessLogs []string
@@ -133,11 +145,87 @@ func (l *LogWorker) List() []string {
 			return true
 		})
 	if err != nil {
-		fmt.Println(err)
+		Logger.Fatalf("listObjectV2Pages return with error: %v", err)
 	}
 	return accessLogs
 }
 
+// Tail return chan of string
+func (l *LogWorker) Tail(logch chan<- string) {
+	go func() {
+		accessLogFilter := NewAccessLogFilter()
+		consumedAccessLogs := make(map[string]struct{})
+
+		lbAccessLogTimestamp := l.AccessLogFilter.StartTime
+		for t := lbAccessLogTimestamp; t.Before(time.Now().UTC()); t = t.Add(5 * time.Minute) {
+			lbAccessLogTimestamp = t
+			lbAccessLog := fmt.Sprintf("%s_elasticloadbalancing_%s_%s_%s",
+				accessLogFilter.AwsAccountID,
+				accessLogFilter.Region,
+				accessLogFilter.LoadBalancerID,
+				t.Format(accessLogEndTimeFormat),
+			)
+			s3Prefix := filepath.Join(l.AccessLogFilter.AccesslogPath(l.Configuration.Prefix), lbAccessLog)
+			for _, accessLog := range *l.listAccessLogs(s3Prefix) {
+				if _, ok := consumedAccessLogs[accessLog]; !ok {
+					consumedAccessLogs[accessLog] = struct{}{}
+					logch <- accessLog
+				}
+			}
+		}
+
+		poller := time.Tick(l.Configuration.PollingInterval)
+		for now := range poller {
+
+			lbAccessLogTimestamp = lbAccessLogTimestamp.Add(15 * time.Second)
+			lbAccessLog := fmt.Sprintf("%s_elasticloadbalancing_%s_%s_%s",
+				accessLogFilter.AwsAccountID,
+				accessLogFilter.Region,
+				accessLogFilter.LoadBalancerID,
+				now.UTC().Format(accessLogEndTimeFormat),
+			)
+			s3Prefix := filepath.Join(l.AccessLogFilter.AccesslogPath(l.Configuration.Prefix), lbAccessLog)
+			for _, accessLog := range *l.listAccessLogs(s3Prefix) {
+				if _, ok := consumedAccessLogs[accessLog]; !ok {
+					consumedAccessLogs[accessLog] = struct{}{}
+					logch <- accessLog
+				}
+			}
+			for k := range consumedAccessLogs {
+				ts := strings.Split(k, "_")
+				t, _ := time.Parse(accessLogEndTimeFormat, ts[4])
+				if t.Before(now.UTC().Add(-2 * time.Minute)) {
+					delete(consumedAccessLogs, k)
+				}
+
+			}
+		}
+	}()
+}
+
+func (l *LogWorker) listAccessLogs(s3Prefix string) *[]string {
+	var al []string
+	input := &s3.ListObjectsV2Input{
+		Bucket:    aws.String(l.Configuration.Bucket),
+		Prefix:    aws.String(s3Prefix),
+		Delimiter: aws.String("/"),
+		MaxKeys:   aws.Int64(l.Configuration.MaxKeys),
+	}
+	err := l.S3.ListObjectsV2Pages(input,
+		func(page *s3.ListObjectsV2Output, lastPage bool) bool {
+			for _, val := range page.Contents {
+				accessLog := strings.Split(*val.Key, "/")[len(strings.Split(*val.Key, "/"))-1]
+				al = append(al, accessLog)
+			}
+			return true
+		})
+	if err != nil {
+		Logger.Fatalf("listObjectV2Pages return with error: %v", err)
+	}
+	return &al
+}
+
+// AccesslogPath return string of the key of accesslog (accesslog with full path of s3)
 func (a *AccessLogFilter) AccesslogPath(prefix string) string {
 	return filepath.Join(prefix, fmt.Sprintf("AWSLogs/%s/elasticloadbalancing/%s/%s/", a.AwsAccountID, a.Region, a.StartTime.Format("2006/01/02"))) + "/"
 
@@ -145,7 +233,7 @@ func (a *AccessLogFilter) AccesslogPath(prefix string) string {
 
 func (a *AccessLogFilter) filterByTime(accessLog string) bool {
 	accessLogEndTimeStr := strings.Split(accessLog, "_")[4]
-	accessLogEndTimeStamp, err := time.Parse("20060102T1504Z", accessLogEndTimeStr)
+	accessLogEndTimeStamp, err := time.Parse(accessLogEndTimeFormat, accessLogEndTimeStr)
 	if err != nil {
 		Logger.Fatalf("failed to parse timestamp for accesslog name")
 	}
@@ -171,17 +259,16 @@ func (a *AccessLogFilter) filterByTime(accessLog string) bool {
 	return false
 }
 
+// NewAccessLogFilter Return AccessLogFilter
 func NewAccessLogFilter() AccessLogFilter {
 
 	startTime, err := time.Parse("2006-01-02 15:04:05", viper.GetString("start-time"))
 	if err != nil {
 		Logger.Fatalf("Failed to parse start time. Gott error: %v", err)
-		fmt.Println("failed to parse starttime")
 	}
 	endTime, err := time.Parse("2006-01-02 15:04:05", viper.GetString("end-time"))
 	if err != nil {
 		Logger.Fatalf("Failed to parse end time. Gott error: %v", err)
-		fmt.Println("failed to parse endtime")
 	}
 	accessLogFilter := AccessLogFilter{}
 	accessLogFilter.AwsAccountID = viper.GetString("aws-account-id")
@@ -195,9 +282,12 @@ func NewAccessLogFilter() AccessLogFilter {
 	return accessLogFilter
 }
 
+// NewConfiguration return Configuration
 func NewConfiguration() Configuration {
 	return Configuration{
-		Bucket: viper.GetString("s3-bucket"),
-		Prefix: viper.GetString("s3-prefix"),
+		Bucket:          viper.GetString("s3-bucket"),
+		Prefix:          viper.GetString("s3-prefix"),
+		PollingInterval: viper.GetDuration("polling-interval"),
+		MaxKeys:         viper.GetInt64("max-keys"),
 	}
 }

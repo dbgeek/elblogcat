@@ -4,6 +4,8 @@
 
 `elblogcat` is tool to list accesslogs for aws loadbalancers and cat them to see the content of them without need to download them local and cat them manual.
 
+This cli program is inspired by [wolviecb](https://github.com/wolviecb) that made bash script that analyses elb/access logs.
+
 ## Installation
 
 ### Manual installation - compile it
