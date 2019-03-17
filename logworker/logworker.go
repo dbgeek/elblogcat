@@ -18,6 +18,7 @@ import (
 )
 
 type (
+	// LogWorker worker
 	LogWorker struct {
 		Config          *AWSconfiguration
 		S3              *s3.S3
@@ -30,11 +31,14 @@ type (
 		Region  string
 		Profile string
 	}
+	// Configuration hold the configuration that is needed.
 	Configuration struct {
 		Bucket          string
 		Prefix          string
 		PollingInterval time.Duration
+		MaxKeys         int64
 	}
+	// AccessLogFilter ..
 	AccessLogFilter struct {
 		matchString    string
 		AwsAccountID   string
@@ -49,6 +53,7 @@ type (
 )
 
 var (
+	// Logger instance of logrus.Logger
 	Logger *logrus.Logger
 )
 
@@ -81,6 +86,7 @@ func newFilter(accessLogFilter *AccessLogFilter) *regexp.Regexp {
 	return regexp
 }
 
+// NewLogWorker return a pointer of LogWorker
 func NewLogWorker(
 	awsConfiguration *AWSconfiguration,
 	configuration *Configuration,
@@ -114,6 +120,7 @@ func NewLogWorker(
 	return &logWorker
 }
 
+// List returns slice of string with accesslog names
 func (l *LogWorker) List() []string {
 
 	var accessLogs []string
@@ -139,6 +146,7 @@ func (l *LogWorker) List() []string {
 	return accessLogs
 }
 
+// Tail return chan of string
 func (l *LogWorker) Tail(logch chan<- string) {
 	go func() {
 		accessLogFilter := NewAccessLogFilter()
@@ -213,6 +221,7 @@ func (l *LogWorker) listAccessLogs(s3Prefix string) *[]string {
 	return &al
 }
 
+// AccesslogPath return string of the key of accesslog (accesslog with full path of s3)
 func (a *AccessLogFilter) AccesslogPath(prefix string) string {
 	return filepath.Join(prefix, fmt.Sprintf("AWSLogs/%s/elasticloadbalancing/%s/%s/", a.AwsAccountID, a.Region, a.StartTime.Format("2006/01/02"))) + "/"
 
@@ -246,6 +255,7 @@ func (a *AccessLogFilter) filterByTime(accessLog string) bool {
 	return false
 }
 
+// NewAccessLogFilter Return AccessLogFilter
 func NewAccessLogFilter() AccessLogFilter {
 
 	startTime, err := time.Parse("2006-01-02 15:04:05", viper.GetString("start-time"))
@@ -270,6 +280,7 @@ func NewAccessLogFilter() AccessLogFilter {
 	return accessLogFilter
 }
 
+// NewConfiguration return Configuration
 func NewConfiguration() Configuration {
 	return Configuration{
 		Bucket:          viper.GetString("s3-bucket"),
