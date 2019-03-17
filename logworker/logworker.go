@@ -209,7 +209,7 @@ func (l *LogWorker) listAccessLogs(s3Prefix string) *[]string {
 		Bucket:    aws.String(l.Configuration.Bucket),
 		Prefix:    aws.String(s3Prefix),
 		Delimiter: aws.String("/"),
-		MaxKeys:   aws.Int64(200),
+		MaxKeys:   aws.Int64(l.Configuration.MaxKeys),
 	}
 	err := l.S3.ListObjectsV2Pages(input,
 		func(page *s3.ListObjectsV2Output, lastPage bool) bool {

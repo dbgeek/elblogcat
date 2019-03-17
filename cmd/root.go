@@ -63,6 +63,8 @@ func init() {
 	viper.BindPFlag("start-time", rootCmd.PersistentFlags().Lookup("start-time"))
 	rootCmd.PersistentFlags().StringP("end-time", "", time.Now().Format("2006-01-02 15:04:05"), "")
 	viper.BindPFlag("end-time", rootCmd.PersistentFlags().Lookup("end-time"))
+	rootCmd.PersistentFlags().Int64P("max-keys", "", 500, "control nr of keys that should be return from s3 api for each response.")
+	viper.BindPFlag("max-keys", rootCmd.PersistentFlags().Lookup("max-keys"))
 
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.
