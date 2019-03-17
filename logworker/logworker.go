@@ -145,7 +145,7 @@ func (l *LogWorker) List() []string {
 			return true
 		})
 	if err != nil {
-		fmt.Println(err)
+		Logger.Fatalf("listObjectV2Pages return with error: %v", err)
 	}
 	return accessLogs
 }
@@ -220,7 +220,7 @@ func (l *LogWorker) listAccessLogs(s3Prefix string) *[]string {
 			return true
 		})
 	if err != nil {
-		fmt.Println(err)
+		Logger.Fatalf("listObjectV2Pages return with error: %v", err)
 	}
 	return &al
 }
@@ -265,12 +265,10 @@ func NewAccessLogFilter() AccessLogFilter {
 	startTime, err := time.Parse("2006-01-02 15:04:05", viper.GetString("start-time"))
 	if err != nil {
 		Logger.Fatalf("Failed to parse start time. Gott error: %v", err)
-		fmt.Println("failed to parse starttime")
 	}
 	endTime, err := time.Parse("2006-01-02 15:04:05", viper.GetString("end-time"))
 	if err != nil {
 		Logger.Fatalf("Failed to parse end time. Gott error: %v", err)
-		fmt.Println("failed to parse endtime")
 	}
 	accessLogFilter := AccessLogFilter{}
 	accessLogFilter.AwsAccountID = viper.GetString("aws-account-id")
