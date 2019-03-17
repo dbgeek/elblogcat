@@ -288,5 +288,6 @@ func NewConfiguration() Configuration {
 		Bucket:          viper.GetString("s3-bucket"),
 		Prefix:          viper.GetString("s3-prefix"),
 		PollingInterval: viper.GetDuration("polling-interval"),
+		MaxKeys:         viper.GetInt64("max-keys"),
 	}
 }
